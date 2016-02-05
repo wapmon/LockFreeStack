@@ -56,12 +56,17 @@ public class Main {
 
 	public void stackOp(ThreadInfo p){
 		if(!tryPerformStackOp(p)){
-			
+			lesOp(p);
 		}
 	}
 
+	private void lesOp(ThreadInfo p) {
+		
+	}
+
 	private boolean tryPerformStackOp(ThreadInfo p) {
-		// TODO Auto-generated method stub
+		
+		
 		return false;
 	}
 }
