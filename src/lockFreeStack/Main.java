@@ -50,8 +50,18 @@ public class Main {
 	}
 	
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
+		
 
 	}
 
+	public void stackOp(ThreadInfo p){
+		if(!tryPerformStackOp(p)){
+			
+		}
+	}
+
+	private boolean tryPerformStackOp(ThreadInfo p) {
+		// TODO Auto-generated method stub
+		return false;
+	}
 }
