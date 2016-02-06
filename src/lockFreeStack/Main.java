@@ -4,9 +4,9 @@ public class Main {
 	
 	public static class Cell{
 		Cell next;
-		Object data;
+		char data;
 		
-		public Cell(Cell next, Object data){
+		public Cell(Cell next, char data){
 			this.next = next;
 			this.data = data;
 		}
@@ -30,7 +30,7 @@ public class Main {
 		}
 	}
 	
-	public static class ThreadInfo{
+	public static class ThreadInfo extends Thread{
 		int id;
 		char op;
 		Cell cell;
@@ -44,6 +44,7 @@ public class Main {
 		}
 	}
 	
+	
 	private static final int NUM_THREADS = 4;
 	private static final int NUM_OPERATIONS = 500000;
 	private static Object[] location = new Object[NUM_THREADS];
@@ -52,22 +53,26 @@ public class Main {
 	private static int numOps = 0;
 	
 	public static void main(String[] args) {
-		
+		ThreadInfo currentThread;
+		for(int i = 0; i < NUM_THREADS; i++){
+			currentThread = new ThreadInfo(i, S.top.data, S.top, null);
+			currentThread.start();
+		}
 	}
 
-	public void stackOp(ThreadInfo p){
+	public static void stackOp(ThreadInfo p){
 		if(!tryPerformStackOp(p)){
 			lesOp(p);
 		}
 	}
 
-	private void lesOp(ThreadInfo p) {
+	private static void lesOp(ThreadInfo p) {
 		while(numOps < NUM_OPERATIONS){
 			location[p.id] = p;
 		}
 	}
 
-	private boolean tryPerformStackOp(ThreadInfo p) {
+	private static boolean tryPerformStackOp(ThreadInfo p) {
 		Cell ptop, pnext;
 		if(p.op == '+'){
 			ptop = S.top;
@@ -92,7 +97,7 @@ public class Main {
 		return false;
 	}
 	
-	private boolean compareAndSwap(Cell V, Cell A, Cell B){
+	private static boolean compareAndSwap(Cell V, Cell A, Cell B){
 		if(A.equals(V)){
 			V = B;
 			return true;
