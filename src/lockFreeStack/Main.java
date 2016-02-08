@@ -46,6 +46,9 @@ public class Main {
 		}
 	}
 	
+	private enum Direction{
+		SHRINK, EXPAND
+	}
 	
 	private static final int NUM_THREADS = 4;
 	private static final int NUM_OPERATIONS = 500000;
@@ -72,7 +75,8 @@ public class Main {
 
 	private static void lesOp(ThreadInfo p) {
 		int position, him = -5000;
-		while(numOps < NUM_OPERATIONS){
+		ThreadInfo q;
+		while(true){
 			location[p.id] = p;
 			position = random.nextInt(NUM_THREADS - 1);
 			him = collision[position];
@@ -80,9 +84,49 @@ public class Main {
 				him = collision[position];
 			}
 			if(him != -5000){
-				
+				q = (ThreadInfo) location[him];
+				if(q != null && q.id == him && q.op != p.op){
+					if(compareAndSwap(location[p.id], p, null)){
+						if(tryCollision(p, q)){
+							break;
+						}
+						else{
+							if(tryPerformStackOp(p)){
+								break;
+							}
+						}
+					} else{
+						finishCollision(p);
+						break;
+					}
+				}
 			}
 		}
+		//delay(spin);
+		AdaptWidth(Direction.SHRINK);
+		if(!compareAndSwap(location[p.id], p, null)){
+			finishCollision(p);
+			return;
+		}
+		
+		if(tryPerformStackOp(p)){
+			return;
+		}
+	}
+
+	private static void AdaptWidth(Direction dir) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	private static void finishCollision(ThreadInfo p) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	private static boolean tryCollision(ThreadInfo p, ThreadInfo q) {
+		// TODO Auto-generated method stub
+		return false;
 	}
 
 	private static boolean tryPerformStackOp(ThreadInfo p) {
