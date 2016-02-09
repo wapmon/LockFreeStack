@@ -24,7 +24,7 @@ public class Main {
 	
 	public static class AdaptParams{
 		int count;
-		float factor;
+		double factor;
 		
 		public AdaptParams(int count, float factor){
 			this.count = count;
@@ -50,12 +50,15 @@ public class Main {
 		SHRINK, EXPAND
 	}
 	
+	// TODO: Figure out the correct values for ADAPT_INIT, MAX_COUNT, MAX_FACTOR, and MIN_FACTOR
+	//and figure our how the delay(spin) should work
 	private static final int NUM_THREADS = 4;
-	private static final int NUM_OPERATIONS = 500000;
-	private static Object[] location = new Object[NUM_THREADS];
+	private static final int NUM_OPERATIONS = 500000, ADAPT_INIT = 1, MAX_COUNT = 5;
+	private static final double MIN_FACTOR = 1.0, MAX_FACTOR = 2.0;
+	private static ThreadInfo[] location = new ThreadInfo[NUM_THREADS];
 	private static int[] collision = new int[NUM_THREADS];
 	private static SimpleStack S = new SimpleStack(null);
-	private static int numOps = 0;
+	private static int numOps = 0, him = -5000;
 	private static Random random = new Random();
 	
 	public static void main(String[] args) {
@@ -74,7 +77,7 @@ public class Main {
 	}
 
 	private static void lesOp(ThreadInfo p) {
-		int position, him = -5000;
+		int position;
 		ThreadInfo q;
 		while(true){
 			location[p.id] = p;
@@ -84,7 +87,7 @@ public class Main {
 				him = collision[position];
 			}
 			if(him != -5000){
-				q = (ThreadInfo) location[him];
+				q = location[him];
 				if(q != null && q.id == him && q.op != p.op){
 					if(compareAndSwap(location[p.id], p, null)){
 						if(tryCollision(p, q)){
@@ -103,7 +106,7 @@ public class Main {
 			}
 		}
 		//delay(spin);
-		AdaptWidth(Direction.SHRINK);
+		adaptWidth(Direction.SHRINK, p);
 		if(!compareAndSwap(location[p.id], p, null)){
 			finishCollision(p);
 			return;
@@ -114,18 +117,52 @@ public class Main {
 		}
 	}
 
-	private static void AdaptWidth(Direction dir) {
-		// TODO Auto-generated method stub
+	private static void adaptWidth(Direction dir, ThreadInfo p) {
+		if(dir.equals(Direction.SHRINK)){
+			if(p.adaptParams.count > 0){
+				p.adaptParams.count--;
+			} else{
+				p.adaptParams.count = ADAPT_INIT;
+				p.adaptParams.factor = (p.adaptParams.factor / 2) > MIN_FACTOR ? (p.adaptParams.factor / 2) : MIN_FACTOR;
+			}
+		}
+		else if(p.adaptParams.count < MAX_COUNT){
+			p.adaptParams.count++;
+		}
+		else{
+			p.adaptParams.count = ADAPT_INIT;
+			p.adaptParams.factor = (2 * p.adaptParams.factor) < MAX_FACTOR ? (2 * p.adaptParams.factor) : MAX_FACTOR;
+		}
 		
 	}
 
 	private static void finishCollision(ThreadInfo p) {
-		// TODO Auto-generated method stub
+		if(p.op == '+'){
+			p.cell = location[p.id].cell;
+			location[p.id] = null;
+		}
 		
 	}
 
 	private static boolean tryCollision(ThreadInfo p, ThreadInfo q) {
-		// TODO Auto-generated method stub
+		if(p.op == '+'){
+			if(compareAndSwap(location[him],q,p)){
+				return true;
+			} else{
+				adaptWidth(Direction.EXPAND, p);
+				return false;
+			}
+		}
+		if(p.op == '-'){
+			if(compareAndSwap(location[him], q, null)){
+				p.cell = q.cell;
+				location[p.id] = null;
+				return true;
+			} else{
+				adaptWidth(Direction.EXPAND, p);
+				return false;
+			}
+		}
 		return false;
 	}
 
