@@ -47,7 +47,12 @@ public class Main {
 		}
 		
 		public void run(){
-			stackOp(this);
+			while(numOps < NUM_OPERATIONS){
+				stackOp(this);
+				this.op = instructions.get(0);
+				instructions.remove(0);
+				numOps++;
+			}
 			System.out.println("Finished thread " + id);
 		}
 	}
@@ -59,21 +64,22 @@ public class Main {
 	// TODO: Figure out the correct values for ADAPT_INIT, MAX_COUNT, MAX_FACTOR, and MIN_FACTOR
 	//and figure our how the delay(spin) should work
 	private static final int NUM_THREADS = 4;
-	private static final int NUM_OPERATIONS = 500000, ADAPT_INIT = 1, MAX_COUNT = 5, MAX_RETRIES = 3;;
+	private static final int NUM_OPERATIONS = 5000, ADAPT_INIT = 1, MAX_COUNT = 5, MAX_RETRIES = 3;;
 	private static final double MIN_FACTOR = 1.0, MAX_FACTOR = 2.0;
 	private static ThreadInfo[] location = new ThreadInfo[NUM_THREADS];
 	private static int[] collision = new int[NUM_THREADS];
 	private static SimpleStack S = new SimpleStack(null);
 	private static int numOps = 0, him = -5000;
 	private static Random random = new Random();
-	private static Character[] instructions = new Character[NUM_OPERATIONS];
+	private static ArrayList<Character> instructions = new ArrayList<Character>();
 	
 	public static void main(String[] args) {
 		ThreadInfo currentThread;
 		initStack();
 		initInstructions();
 		for(int i = 0; i < NUM_THREADS; i++){
-			currentThread = new ThreadInfo(i, instructions[i], S.top, null);
+			currentThread = new ThreadInfo(i, instructions.get(i), S.top, null);
+			instructions.remove(i);
 			currentThread.start();
 		}
 		System.out.println("Made it to the end of main()");
@@ -228,22 +234,22 @@ public class Main {
 		return false;
 	}
 	private static void initStack(){
-		Cell currentCell = new Cell(null, 'c');
+		Cell currentCell = new Cell(null, '0');
 		Cell nextCell;
 		for(int i = 0; i < 50; i++){
-			nextCell = new Cell(null, 'c');
+			nextCell = new Cell(null, Integer.toString(i+1).charAt(0));
 			currentCell.next = nextCell;
 			currentCell = nextCell;
 			S.top = currentCell;
 		}
 	}
 	
-	private static Character[] initInstructions(){
+	private static ArrayList<Character> initInstructions(){
 		for(int i = 0; i < 500000; i++){
-			if(i < 250000){
-				instructions[i] = '+';
+			if(random.nextBoolean()){
+				instructions.add('+');
 			}else {
-				instructions[i] = '-';
+				instructions.add('-');
 			}
 		}
 		return instructions;
