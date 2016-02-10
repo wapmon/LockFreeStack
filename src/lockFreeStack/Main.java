@@ -55,6 +55,7 @@ public class Main {
 	private static final int NUM_THREADS = 4;
 	private static final int NUM_OPERATIONS = 500000, ADAPT_INIT = 1, MAX_COUNT = 5;
 	private static final double MIN_FACTOR = 1.0, MAX_FACTOR = 2.0;
+	private static final int MAX_RETRIES = 3;
 	private static ThreadInfo[] location = new ThreadInfo[NUM_THREADS];
 	private static int[] collision = new int[NUM_THREADS];
 	private static SimpleStack S = new SimpleStack(null);
@@ -64,10 +65,10 @@ public class Main {
 	public static void main(String[] args) {
 		ThreadInfo currentThread;
 		initStack();
-//		for(int i = 0; i < NUM_THREADS; i++){
-//			currentThread = new ThreadInfo(i, S.top.data, S.top, null);
-//			currentThread.start();
-//		}
+		for(int i = 0; i < NUM_THREADS; i++){
+			currentThread = new ThreadInfo(i, S.top.data, S.top, null);
+			currentThread.start();
+		}
 	}
 
 	public static void stackOp(ThreadInfo p){
@@ -105,7 +106,7 @@ public class Main {
 				}
 			}
 		}
-		//delay(spin);
+		delay(p);
 		adaptWidth(Direction.SHRINK, p);
 		if(!compareAndSwap(location[p.id], p, null)){
 			finishCollision(p);
@@ -201,6 +202,23 @@ public class Main {
 		}
 	}
 	
+	public static boolean delay(ThreadInfo p){
+		boolean retry = true;
+		int retries = 0;
+		ThreadInfo temp = p;
+		while(retry && retries < MAX_RETRIES){
+			try {
+				Thread.sleep((long) Math.pow(2, retries));
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			if(p.equals(temp)){
+				return true;
+			}
+		}
+		return false;
+	}
 	private static void initStack(){
 		Cell currentCell = new Cell(null, 'c');
 		Cell nextCell;
