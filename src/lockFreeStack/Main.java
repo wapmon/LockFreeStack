@@ -42,7 +42,7 @@ public class Main {
 		
 		public ThreadInfo(int id, char op, Cell cell, AdaptParams adaptParams){
 			this.id = id;
-			this.cell = cell;
+			this.cell = cell == null ? new Cell(null, 'T') : cell;
 			this.op = op;
 			this.adaptParams = adaptParams;
 		}
@@ -64,7 +64,7 @@ public class Main {
 	
 	// TODO: Figure out the correct values for ADAPT_INIT, MAX_COUNT, MAX_FACTOR, and MIN_FACTOR
 	//and figure our how the delay(spin) should work
-	private static final int NUM_THREADS = 1;
+	private static final int NUM_THREADS = 4;
 	private static final int NUM_OPERATIONS = 50000, ADAPT_INIT = 1, MAX_COUNT = 5, MAX_RETRIES = 3 ;
 	private static final double MIN_FACTOR = 1.0, MAX_FACTOR = 2.0;
 	private static ThreadInfo[] location = new ThreadInfo[NUM_THREADS];
@@ -79,7 +79,7 @@ public class Main {
 		initStack();
 		initInstructions();
 		for(int i = 0; i < NUM_THREADS; i++){
-			currentThread = new ThreadInfo(i, instructions.get(i), S.top, null);
+			currentThread = new ThreadInfo(i, instructions.get(i), null, null);
 			currentThread.start();
 		}
 		System.out.println("Made it to the end of main()");
@@ -243,8 +243,7 @@ public class Main {
 		Cell currentCell = new Cell(null, '0');
 		Cell nextCell;
 		for(int i = 0; i < 50; i++){
-			nextCell = new Cell(null, Integer.toString(i%10).charAt(0));
-			currentCell.next = nextCell;
+			nextCell = new Cell(currentCell, (char) ('a' + i));
 			currentCell = nextCell;
 			S.top = currentCell;
 		}
