@@ -2,6 +2,7 @@ package lockFreeStack;
 
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Main {
 	
@@ -63,8 +64,8 @@ public class Main {
 	
 	// TODO: Figure out the correct values for ADAPT_INIT, MAX_COUNT, MAX_FACTOR, and MIN_FACTOR
 	//and figure our how the delay(spin) should work
-	private static final int NUM_THREADS = 4;
-	private static final int NUM_OPERATIONS = 5000, ADAPT_INIT = 1, MAX_COUNT = 5, MAX_RETRIES = 3;;
+	private static final int NUM_THREADS = 1;
+	private static final int NUM_OPERATIONS = 50000, ADAPT_INIT = 1, MAX_COUNT = 5, MAX_RETRIES = 3 ;
 	private static final double MIN_FACTOR = 1.0, MAX_FACTOR = 2.0;
 	private static ThreadInfo[] location = new ThreadInfo[NUM_THREADS];
 	private static int[] collision = new int[NUM_THREADS];
@@ -79,7 +80,6 @@ public class Main {
 		initInstructions();
 		for(int i = 0; i < NUM_THREADS; i++){
 			currentThread = new ThreadInfo(i, instructions.get(i), S.top, null);
-			instructions.remove(i);
 			currentThread.start();
 		}
 		System.out.println("Made it to the end of main()");
@@ -89,6 +89,7 @@ public class Main {
 		if(!tryPerformStackOp(p)){
 			lesOp(p);
 		}
+		p.cell = S.top.next;
 	}
 
 	private static void lesOp(ThreadInfo p) {
@@ -165,6 +166,7 @@ public class Main {
 				return true;
 			} else{
 				adaptWidth(Direction.EXPAND, p);
+				System.out.println("tryCollision is false");
 				return false;
 			}
 		}
@@ -175,6 +177,7 @@ public class Main {
 				return true;
 			} else{
 				adaptWidth(Direction.EXPAND, p);
+				System.out.println("tryCollision is false");
 				return false;
 			}
 		}
@@ -200,9 +203,11 @@ public class Main {
 				return true;
 			}
 			else{
+				System.out.println("tryPerformStackOp is false");
 				return false;
 			}
 		}
+		System.out.println("tryPerformStackOp is false");
 		return false;
 	}
 	
@@ -212,6 +217,7 @@ public class Main {
 			return true;
 		}
 		else{
+			System.out.println("compareAndSwap is false");
 			return false;
 		}
 	}
@@ -237,21 +243,20 @@ public class Main {
 		Cell currentCell = new Cell(null, '0');
 		Cell nextCell;
 		for(int i = 0; i < 50; i++){
-			nextCell = new Cell(null, Integer.toString(i+1).charAt(0));
+			nextCell = new Cell(null, Integer.toString(i%10).charAt(0));
 			currentCell.next = nextCell;
 			currentCell = nextCell;
 			S.top = currentCell;
 		}
 	}
 	
-	private static ArrayList<Character> initInstructions(){
-		for(int i = 0; i < 500000; i++){
+	private static void initInstructions(){
+		for(int i = 0; i < 520000; i++){
 			if(random.nextBoolean()){
 				instructions.add('+');
 			}else {
 				instructions.add('-');
 			}
 		}
-		return instructions;
 	}
 }
