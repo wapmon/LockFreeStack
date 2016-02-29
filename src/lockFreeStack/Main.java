@@ -3,6 +3,10 @@ package lockFreeStack;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicIntegerArray;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 public class Main {
 	
@@ -17,10 +21,10 @@ public class Main {
 	}
 	
 	public static class SimpleStack{
-		Cell top;
+		AtomicReference<Cell> top = new AtomicReference<Cell>();
 		
 		public SimpleStack(Cell top){
-			this.top = top;
+			this.top.set(top);
 		}
 	}
 	
@@ -62,15 +66,14 @@ public class Main {
 		SHRINK, EXPAND
 	}
 	
-	// TODO: Figure out the correct values for ADAPT_INIT, MAX_COUNT, MAX_FACTOR, and MIN_FACTOR
+	// TODO: Figure out the correct values for ADAPT_INIT, MAX_COUNT
 	//and figure collision layer is applied to threads.
 	private static final int NUM_THREADS = 8;
-	private static final int NUM_OPERATIONS = 500000, ADAPT_INIT = 1, MAX_COUNT = 5, MAX_RETRIES = 10 ;
-	private static final double MIN_FACTOR = 1.0, MAX_FACTOR = 2.0;
-	private static ThreadInfo[] location = new ThreadInfo[NUM_THREADS];
-	private static int[] collision = new int[NUM_THREADS];
-	private static SimpleStack S = new SimpleStack(null);
-	private static int numOps = 0;
+	private static final int NUM_OPERATIONS = 5000000, ADAPT_INIT = 1, MAX_COUNT = 5, MAX_RETRIES = 10 ;
+	private static final double MIN_FACTOR = 0.0, MAX_FACTOR = 1.0;
+	private static AtomicReferenceArray<ThreadInfo> location = new AtomicReferenceArray<ThreadInfo>(NUM_THREADS);
+	private static AtomicIntegerArray collision = new AtomicIntegerArray(NUM_THREADS);
+	private static SimpleStack S;
 	private static Random random = new Random();
 	
 	
@@ -78,7 +81,7 @@ public class Main {
 		ThreadInfo currentThread;
 		initStack();
 		for(int i = 0; i < NUM_THREADS; i++){
-			collision[i] = -5000;
+			collision.set(i, -5000);
 			currentThread = new ThreadInfo(i, ' ', null, null);
 			currentThread.start();
 		}
@@ -87,7 +90,7 @@ public class Main {
 
 	public static void stackOp(ThreadInfo p){
 		if(!tryPerformStackOp(p)){
-			System.out.println("Stack op failed");
+//			System.out.println("Stack op failed");
 			lesOp(p);
 		}
 	}
@@ -96,16 +99,16 @@ public class Main {
 		int position, him;
 		ThreadInfo q;
 		while(true){
-			location[p.id] = p;
+			location.set(p.id, p);
 			position = random.nextInt(NUM_THREADS - 1);
-			him = collision[position];
-			while(!compareAndSwap(collision[position], him, p.id)){
-				him = collision[position];
+			him = collision.get(position);
+			while(!collision.compareAndSet(position, him, p.id)){
+				him = collision.get(position);
 			}
 			if(him != -5000){
-				q = location[him];
+				q = location.get(him);
 				if(q != null && q.id == him && q.op != p.op){
-					if(compareAndSwap(location[p.id], p, null)){
+					if(location.compareAndSet(p.id, p, null)){
 						if(tryCollision(p, q, him)){
 							break;
 						}
@@ -123,7 +126,7 @@ public class Main {
 			if(!delay(p)){
 				adaptWidth(Direction.SHRINK, p);
 			}
-			if(!compareAndSwap(location[p.id], p, null)){
+			if(!location.compareAndSet(p.id, p, null)){
 				finishCollision(p);
 				break;
 			}
@@ -155,30 +158,30 @@ public class Main {
 
 	private static void finishCollision(ThreadInfo p) {
 		if(p.op == '+'){
-			p.cell = location[p.id].cell;
-			location[p.id] = null;
+			p.cell = location.get(p.id).cell;
+			location.set(p.id, null);;
 		}
 		
 	}
 
 	private static boolean tryCollision(ThreadInfo p, ThreadInfo q, int him) {
 		if(p.op == '+'){
-			if(compareAndSwap(location[him],q,p)){
+			if(location.compareAndSet(him, q, p)){
 				return true;
 			} else{
 				adaptWidth(Direction.EXPAND, p);
-				System.out.println("tryCollision is false");
+//				System.out.println("tryCollision is false");
 				return false;
 			}
 		}
 		if(p.op == '-'){
-			if(compareAndSwap(location[him], q, null)){
+			if(location.compareAndSet(him, q, null)){
 				p.cell = q.cell;
-				location[p.id] = null;
+				location.set(p.id, null);;
 				return true;
 			} else{
 				adaptWidth(Direction.EXPAND, p);
-				System.out.println("tryCollision is false");
+//				System.out.println("tryCollision is false");
 				return false;
 			}
 		}
@@ -186,80 +189,60 @@ public class Main {
 	}
 
 	private static boolean tryPerformStackOp(ThreadInfo p) {
-		Cell ptop, pnext;
+		Cell ptop;
+		Cell pnext;
 		if(p.op == '+'){
-			ptop = S.top;
+			ptop = S.top.get();
 			if(p.cell == null){
 				System.out.println("null");
 				p.cell = new Cell(null, 'p');
 			}
 			p.cell.next = ptop;
-			if(compareAndSwap(ptop, p.cell)){
+			if(S.top.compareAndSet(ptop, p.cell)){
 				p.cell = new Cell(null, 'p');
 				return true;
 			}
 			else{
+//				System.out.println("tryPerformStackOp is false");
 				return false;
 			}
 		}
 		else if(p.op == '-'){
-			ptop = S.top;
+			ptop = S.top.get();
 			
 			//stack is empty
 			if(ptop == null){
-				p.cell = null;
+//				p.cell = null;
 				return true;
 			}
 			
-			pnext = ptop.next;
-			if(compareAndSwap(ptop, pnext)){
+			pnext = ptop;
+			if(S.top.compareAndSet(ptop, pnext)){
 				p.cell = ptop;
 				return true;
 			}
 			else{
-				System.out.println("tryPerformStackOp is false");
+//				System.out.println("tryPerformStackOp is false");
 				return false;
 			}
 		}
-		System.out.println("tryPerformStackOp is false");
 		return false;
 	}
 	
-	private static boolean compareAndSwap(Cell A, Cell B) {
-//		if(A == null || B == null){
-//			System.out.println("null");
+//	private static boolean compareAndSwap(Cell A, Cell B) {
+////		if(A == null || B == null){
+////			System.out.println("null");
+////		}
+//		if((A == null && S.top == null) || S.top.equals(A)){
+//			S.top.set(B);;
+//			return true;
 //		}
-		if((A == null && S.top == null) || S.top.equals(A)){
-			S.top = B;
-			return true;
-		}
-		else{
-			System.out.println("compareAndSwap is false");
-			return false;
-		}
-	}
+//		else{
+//			System.out.println("compareAndSwap is false");
+//			return false;
+//		}
+//	}
 
-	private static boolean compareAndSwap(ThreadInfo V, ThreadInfo A, ThreadInfo B){
-		if(V.equals(A)){
-			V = B;
-			return true;
-		}
-		else{
-			System.out.println("compareAndSwap is false");
-			return false;
-		}
-	}
-	
-	private static boolean compareAndSwap(int V, int A, int B){
-		if(V == A){
-			V = B;
-			return true;
-		}
-		else{
-			System.out.println("compareAndSwap is false");
-			return false;
-		}
-	}
 	
 	//TODO: Needs to use Shavit and Zemach technique for diffracting trees
 	public static boolean delay(ThreadInfo p){
@@ -282,8 +265,8 @@ public class Main {
 		for(int i = 0; i < 50; i++){
 			nextCell = new Cell(currentCell, (char) ('a' + i));
 			currentCell = nextCell;
-			S.top = currentCell;
 		}
+		S = new SimpleStack(currentCell);
 	}
 	
 	private static ArrayList<Character> initInstructions(){
