@@ -1,5 +1,6 @@
 package lockFreeStack;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -7,6 +8,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 public class Main {
 	
@@ -32,7 +37,7 @@ public class Main {
 		int count;
 		double factor;
 		
-		public AdaptParams(int count, float factor){
+		public AdaptParams(int count, double factor){
 			this.count = count;
 			this.factor = factor;
 		}
@@ -66,23 +71,37 @@ public class Main {
 		SHRINK, EXPAND
 	}
 	
-	// TODO: Figure out the correct values for ADAPT_INIT, MAX_COUNT
+	// TODO: Figure out the correct values for ADAPT_INIT, MAX_COUNT, and how to init AdaptParams
 	//and figure collision layer is applied to threads.
 	private static final int NUM_THREADS = 8;
-	private static final int NUM_OPERATIONS = 5000000, ADAPT_INIT = 1, MAX_COUNT = 5, MAX_RETRIES = 10 ;
+	private static final int NUM_OPERATIONS = 5, ADAPT_INIT = NUM_THREADS / 2, MAX_COUNT = NUM_THREADS, MAX_RETRIES = 10 ;
 	private static final double MIN_FACTOR = 0.0, MAX_FACTOR = 1.0;
 	private static AtomicReferenceArray<ThreadInfo> location = new AtomicReferenceArray<ThreadInfo>(NUM_THREADS);
 	private static AtomicIntegerArray collision = new AtomicIntegerArray(NUM_THREADS);
 	private static SimpleStack S;
 	private static Random random = new Random();
+//	private static final Logger logger = Logger.getLogger("MyLog");
 	
 	
 	public static void main(String[] args) {
+//		FileHandler fh = null;
+//		try {
+//			fh = new FileHandler("C:\\Users\\Austin\\workspace\\LockFreeStack\\src\\lockFreeStack\\log.txt");
+//		} catch (SecurityException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}  
+//        logger.addHandler(fh);
+//        SimpleFormatter formatter = new SimpleFormatter();  
+//        fh.setFormatter(formatter);
 		ThreadInfo currentThread;
 		initStack();
 		for(int i = 0; i < NUM_THREADS; i++){
 			collision.set(i, -5000);
-			currentThread = new ThreadInfo(i, ' ', null, null);
+			currentThread = new ThreadInfo(i, ' ', null, new AdaptParams(0,0.0));
 			currentThread.start();
 		}
 		System.out.println("Made it to the end of main()");
@@ -90,7 +109,7 @@ public class Main {
 
 	public static void stackOp(ThreadInfo p){
 		if(!tryPerformStackOp(p)){
-//			System.out.println("Stack op failed");
+//			logger.log(Level.FINE,"Stack op failed");
 			lesOp(p);
 		}
 	}
@@ -100,6 +119,8 @@ public class Main {
 		ThreadInfo q;
 		while(true){
 			location.set(p.id, p);
+			//TODO: This needs to be a getPostion() method that uses Threadinfo.factor to
+			//create a collision layer for collision array
 			position = random.nextInt(NUM_THREADS - 1);
 			him = collision.get(position);
 			while(!collision.compareAndSet(position, him, p.id)){
@@ -123,7 +144,9 @@ public class Main {
 					}
 				}
 			}
+//			System.out.println("Calling delay");
 			if(!delay(p)){
+//				logger.log(Level.INFO, "Delay has failed, calling adaptWith()");
 				adaptWidth(Direction.SHRINK, p);
 			}
 			if(!location.compareAndSet(p.id, p, null)){
@@ -157,22 +180,27 @@ public class Main {
 	}
 
 	private static void finishCollision(ThreadInfo p) {
-		if(p.op == '+'){
+		if(p.op == '-'){
+//			if(p.cell == null || location.get(p.id) == null){
+//				System.out.println();
+//			}
 			p.cell = location.get(p.id).cell;
-			location.set(p.id, null);;
+			location.set(p.id, null);
 		}
 		
 	}
 
 	private static boolean tryCollision(ThreadInfo p, ThreadInfo q, int him) {
 		if(p.op == '+'){
-			if(location.compareAndSet(him, q, p)){
-				return true;
-			} else{
-				adaptWidth(Direction.EXPAND, p);
-//				System.out.println("tryCollision is false");
-				return false;
+			for(int i = (int) ((NUM_THREADS / 2) - ((p.adaptParams.factor * NUM_THREADS) / 2));
+					i < ((NUM_THREADS / 2) + ((p.adaptParams.factor * NUM_THREADS) / 2)); i++){
+				if(location.compareAndSet(him, q, p)){	
+					return true;
+				} 
 			}
+//				logger.log(Level.WARNING, "tryCollision is false");
+			adaptWidth(Direction.EXPAND, p);
+			return false;
 		}
 		if(p.op == '-'){
 			if(location.compareAndSet(him, q, null)){
@@ -180,8 +208,8 @@ public class Main {
 				location.set(p.id, null);;
 				return true;
 			} else{
+//				logger.log(Level.WARNING, "tryCollision is false");
 				adaptWidth(Direction.EXPAND, p);
-//				System.out.println("tryCollision is false");
 				return false;
 			}
 		}
@@ -203,7 +231,7 @@ public class Main {
 				return true;
 			}
 			else{
-//				System.out.println("tryPerformStackOp is false");
+//				logger.log(Level.WARNING, "tryPerformStackOp is false");
 				return false;
 			}
 		}
@@ -222,7 +250,7 @@ public class Main {
 				return true;
 			}
 			else{
-//				System.out.println("tryPerformStackOp is false");
+//				logger.log(Level.WARNING, "tryPerformStackOp is false");
 				return false;
 			}
 		}
@@ -245,7 +273,7 @@ public class Main {
 
 	
 	//TODO: Needs to use Shavit and Zemach technique for diffracting trees
-	public static boolean delay(ThreadInfo p){
+	private static boolean delay(ThreadInfo p){
 		boolean retry = true;
 		int retries = 0;
 		ThreadInfo temp = p;
@@ -253,10 +281,13 @@ public class Main {
 			long startTime = System.currentTimeMillis();
 			while(System.currentTimeMillis() - startTime < Math.pow(2, retries)){
 			}
-			if(p.equals(temp)){
+			if(!p.equals(temp)){
+//				System.out.println("delay Worked");
 				return true;
 			}
+			retries++;
 		}
+//		System.out.println("delay did not Work");
 		return false;
 	}
 	private static void initStack(){
