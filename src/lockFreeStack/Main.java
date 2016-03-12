@@ -71,8 +71,6 @@ public class Main {
 		SHRINK, EXPAND
 	}
 	
-	// TODO: Figure out the correct values for ADAPT_INIT, MAX_COUNT, and how to init AdaptParams
-	//and figure collision layer is applied to threads.
 	private static final int NUM_THREADS = 8;
 	private static final int NUM_OPERATIONS = 500000, ADAPT_INIT = NUM_THREADS / 2, MAX_COUNT = NUM_THREADS, MAX_RETRIES = 3;
 	private static final double MIN_FACTOR = 0.0, MAX_FACTOR = 1.0;
@@ -80,23 +78,9 @@ public class Main {
 	private static AtomicIntegerArray collision = new AtomicIntegerArray(NUM_THREADS);
 	private static SimpleStack S = new SimpleStack(null);
 	private static Random random = new Random();
-//	private static final Logger logger = Logger.getLogger("MyLog");
 	
 	
 	public static void main(String[] args) {
-//		FileHandler fh = null;
-//		try {
-//			fh = new FileHandler("C:\\Users\\Austin\\workspace\\LockFreeStack\\src\\lockFreeStack\\log.txt");
-//		} catch (SecurityException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}  
-//        logger.addHandler(fh);
-//        SimpleFormatter formatter = new SimpleFormatter();  
-//        fh.setFormatter(formatter);
 		ThreadInfo currentThread;
 //		initStack();
 		for(int i = 0; i < NUM_THREADS; i++){
@@ -249,22 +233,6 @@ public class Main {
 		return false;
 	}
 	
-//	private static boolean compareAndSwap(Cell A, Cell B) {
-////		if(A == null || B == null){
-////			System.out.println("null");
-////		}
-//		if((A == null && S.top == null) || S.top.equals(A)){
-//			S.top.set(B);;
-//			return true;
-//		}
-//		else{
-//			System.out.println("compareAndSwap is false");
-//			return false;
-//		}
-//	}
-
-	
-	//TODO: Needs to use Shavit and Zemach technique for diffracting trees
 	private static boolean delay(ThreadInfo p){
 		boolean retry = true;
 		int retries = 0;
@@ -274,12 +242,10 @@ public class Main {
 			while(System.currentTimeMillis() - startTime < Math.pow(2, retries)){
 			}
 			if(!p.equals(temp)){
-//				System.out.println("delay Worked");
 				return true;
 			}
 			retries++;
 		}
-//		System.out.println("delay did not Work");
 		return false;
 	}
 	private static void initStack(){
