@@ -160,10 +160,9 @@ public class Main {
 
 	private static void finishCollision(ThreadInfo p) {
 		if(p.op == '-'){
-//			if(p.cell == null || location.get(p.id) == null){
-//				System.out.println();
-//			}
-			p.cell = location.get(p.id).cell;
+			if(location.get(p.id) != null){
+				p.cell = location.get(p.id).cell;
+			}
 			location.set(p.id, null);
 		}
 		
@@ -177,20 +176,20 @@ public class Main {
 					return true;
 				} 
 			}
-//				logger.log(Level.WARNING, "tryCollision is false");
 			adaptWidth(Direction.EXPAND, p);
 			return false;
 		}
 		if(p.op == '-'){
-			if(location.compareAndSet(him, q, null)){
-				p.cell = q.cell;
-				location.set(p.id, null);;
-				return true;
-			} else{
-//				logger.log(Level.WARNING, "tryCollision is false");
+			for(int i = (int) ((NUM_THREADS / 2) - ((p.adaptParams.factor * NUM_THREADS) / 2));
+					i < ((NUM_THREADS / 2) + ((p.adaptParams.factor * NUM_THREADS) / 2)); i++){
+				if(location.compareAndSet(him, q, null)){
+					p.cell = q.cell;
+					location.set(p.id, null);;
+					return true;
+				}		
+			}
 				adaptWidth(Direction.EXPAND, p);
 				return false;
-			}
 		}
 		return false;
 	}
