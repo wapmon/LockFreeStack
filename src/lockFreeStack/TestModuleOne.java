@@ -2,6 +2,7 @@ package lockFreeStack;
 
 import java.util.ArrayList;
 import java.util.InputMismatchException;
+import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicIntegerArray;
@@ -115,12 +116,12 @@ public class TestModuleOne {
 	//Random generator for operation distribution and position allocation
 	private static Random random = new Random();
 	
-//	private static long operationTimeTotal = 0;
 	
 	
 	public static void main(String[] args) {
 		ThreadInfo currentThread;
-		Scanner scanner = new Scanner(System.in);;
+		Scanner scanner = new Scanner(System.in);
+		List<ThreadInfo> threads = new ArrayList<ThreadInfo>();
 		while(true) {    
 		    try {
 		        System.out.print("Enter Number of Threads: ");
@@ -135,11 +136,21 @@ public class TestModuleOne {
 		 collision = new AtomicIntegerArray(NUM_THREADS);
 		 location = new AtomicReferenceArray<ThreadInfo>(NUM_THREADS);
 		//create and start the threads, each with 500,000 operations
+		long startTime = System.currentTimeMillis();
 		for(int i = 0; i < NUM_THREADS; i++){
 			collision.set(i, -5000);
 			currentThread = new ThreadInfo(i, ' ', null, new AdaptParams(0,0.0));
+			threads.add(currentThread);
 			currentThread.start();
 		}
+		for(ThreadInfo thread : threads){
+			try {
+				thread.join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		System.out.println("Total Execution Time: " + (System.currentTimeMillis() - startTime) + " ms");
 	}
 	
 	/**
